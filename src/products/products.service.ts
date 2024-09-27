@@ -2,12 +2,15 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class ProductsService {
+  constructor(private readonly usersService: UsersService) {}
   private products = [
     {
       id: 1,
@@ -26,7 +29,18 @@ export class ProductsService {
   }
 
   findAll(request: any) {
-    return request.discount
+    const user = this.usersService.findOne(Number(request.userId));
+    if (!user) throw new UnauthorizedException();
+
+    const dateToCheck = new Date(user.subsCription);
+    const currentDate = new Date();
+
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(currentDate.getMonth() - 1);
+
+    const isWithinOneMonth = dateToCheck > oneMonthAgo;
+
+    return isWithinOneMonth
       ? this.products.map((product) => ({
           ...product,
           price: product.price * 0.9,
